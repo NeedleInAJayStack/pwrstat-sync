@@ -2,7 +2,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os
 import subprocess
-import json
 import psycopg2
 
 load_dotenv()

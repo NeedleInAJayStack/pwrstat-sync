@@ -2,15 +2,15 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os
 import subprocess
-import psycopg2
+import json
+import requests
 
 load_dotenv()
 
-db_host = os.getenv('DB_HOST')
-db_port = os.getenv('DB_PORT')
-db_name = os.getenv('DB_NAME')
-db_user = os.getenv('DB_USER')
-db_password = os.getenv('DB_PASSWORD')
+api_path = "https://utility-api.jayherron.org"
+
+api_user = os.getenv('API_USER')
+api_password = os.getenv('API_PASSWORD')
 
 current_time = datetime.now()
 
@@ -36,12 +36,24 @@ for line in output.split("\n"):
 voltage_point_id = "cf04b9ef-6ac8-4e0f-bc5f-9d06e9a1e4f7"
 power_point_id = "c9d69b23-adaf-496d-92ab-a61a4cdb5957"
 
-conn = psycopg2.connect(host=db_host, port=db_port, dbname=db_name, user=db_user, password=db_password)
-cur = conn.cursor()
+token_request = requests.get(f"{api_path}/auth/token", auth=(api_user, api_password))
+assert(token_request.ok)
+api_token = token_request.json()["token"]
 
-cur.execute("INSERT INTO his (\"pointId\", ts, value) VALUES (%s, %s, %s)", (voltage_point_id, current_time, voltage))
-cur.execute("INSERT INTO his (\"pointId\", ts, value) VALUES (%s, %s, %s)", (power_point_id, current_time, power))
+tokenRequest = requests.post(
+    f"{api_path}/his/{voltage_point_id}",
+    headers = {"Authorization": f"Bearer {api_token}"},
+    data = {
+        "ts": f"{current_time}",
+        "value": f"{voltage}"
+    }
+)
 
-conn.commit()
-cur.close()
-conn.close()
+tokenRequest = requests.post(
+    f"{api_path}/his/{power_point_id}",
+    headers = {"Authorization": f"Bearer {api_token}"},
+    data = {
+        "ts": f"{current_time}",
+        "value": f"{power}"
+    }
+)

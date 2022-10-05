@@ -12,7 +12,7 @@ api_path = "https://utility-api.jayherron.org"
 api_user = os.getenv('API_USER')
 api_password = os.getenv('API_PASSWORD')
 
-current_time = datetime.now()
+current_time = datetime.utcnow().replace(microsecond=0).isoformat() + "+00:00"
 
 # Measure speed
 # This requires the pwrstat cli: https://www.cyberpowersystems.com/product/software/power-panel-personal/powerpanel-for-linux/
@@ -25,35 +25,39 @@ for line in output.split("\n"):
     if trimmed.startswith("Utility Voltage"):
         lineArr = trimmed.split(".")
         valStr = lineArr[-1].strip()
-        voltage = valStr.split(" ")[0]
+        voltageStr = valStr.split(" ")[0]
+        voltage = float(voltageStr)
     if trimmed.startswith("Load"):
         lineArr = trimmed.split(".")
         valStr = lineArr[-1].strip()
-        power = valStr.split(" ")[0]
+        powerStr = valStr.split(" ")[0]
+        power = float(powerStr)
 
 
-# Write to SQL
+# Write to API
 voltage_point_id = "cf04b9ef-6ac8-4e0f-bc5f-9d06e9a1e4f7"
 power_point_id = "c9d69b23-adaf-496d-92ab-a61a4cdb5957"
 
 token_request = requests.get(f"{api_path}/auth/token", auth=(api_user, api_password))
-assert(token_request.ok)
+token_request.raise_for_status()
 api_token = token_request.json()["token"]
 
-tokenRequest = requests.post(
+voltage_request = requests.post(
     f"{api_path}/his/{voltage_point_id}",
     headers = {"Authorization": f"Bearer {api_token}"},
-    data = {
-        "ts": f"{current_time}",
-        "value": f"{voltage}"
+    json = {
+        "ts": current_time,
+        "value": voltage
     }
 )
+voltage_request.raise_for_status()
 
-tokenRequest = requests.post(
+power_request = requests.post(
     f"{api_path}/his/{power_point_id}",
     headers = {"Authorization": f"Bearer {api_token}"},
-    data = {
-        "ts": f"{current_time}",
-        "value": f"{power}"
+    json = {
+        "ts": current_time,
+        "value": power
     }
 )
+power_request.raise_for_status()
